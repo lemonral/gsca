@@ -1,0 +1,58 @@
+name: zhouyi-general-agent
+
+services:
+  agent:
+    build:
+      context: .
+    image: zhouyi/general-agent:0.1
+    init: true
+    restart: unless-stopped
+    # Linux rootful Docker: the existing model proxy listens only on host loopback.
+    # Rootless Docker has an extra network namespace; test reachability separately.
+    network_mode: host
+    user: "${AGENT_UID:-1000}:${AGENT_GID:-1000}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m
+    volumes:
+      - ./data:/data
+    secrets:
+      - model_token
+      - access_token
+    environment:
+      APP_BIND_HOST: "${APP_BIND_HOST:-127.0.0.1}"
+      APP_PORT: "${APP_PORT:-3189}"
+      AGENT_DATA_DIR: /data
+      MODEL_BASE_URL: "${MODEL_BASE_URL:-http://127.0.0.1:3184}"
+      MODEL_NAME: "${MODEL_NAME:-qwen3.8:27b}"
+      MODEL_TOKEN_FILE: /run/secrets/model_token
+      APP_ACCESS_TOKEN_FILE: /run/secrets/access_token
+      AGENT_MAX_STEPS: "${AGENT_MAX_STEPS:-8}"
+      AGENT_MAX_OUTPUT_TOKENS: "${AGENT_MAX_OUTPUT_TOKENS:-2048}"
+      AGENT_MAX_TOTAL_TOKENS: "${AGENT_MAX_TOTAL_TOKENS:-18000}"
+      AGENT_RUN_TIMEOUT: "${AGENT_RUN_TIMEOUT:-240}"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os,urllib.request; h=os.getenv('APP_BIND_HOST','127.0.0.1'); h='127.0.0.1' if h=='0.0.0.0' else h; urllib.request.build_opener(urllib.request.ProxyHandler({})).open('http://'+h+':'+os.getenv('APP_PORT','3189')+'/api/health',timeout=5).close()"
+      interval: 30s
+      timeout: 8s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  model_token:
+    file: "${MODEL_TOKEN_FILE:?Set MODEL_TOKEN_FILE to the existing model-proxy token file}"
+  access_token:
+    file: "${APP_ACCESS_TOKEN_FILE:?Set APP_ACCESS_TOKEN_FILE to the application login-code file}"

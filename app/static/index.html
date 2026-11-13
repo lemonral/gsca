@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>General Agent · 周熠</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <section id="connection-screen" class="screen" aria-live="polite">
+    <div class="connection-box"><div class="brand-mark">G<span>↗</span></div><h1>General Agent</h1><p id="connection-message">正在连接工作台…</p><button id="retry-connection" class="button secondary" hidden>重新连接</button></div>
+  </section>
+  <section id="login-screen" class="screen" hidden>
+    <div class="login-intro"><span class="eyebrow">PERSONAL AGENT WORKSPACE</span><h1>你的独立<br>Agent 工作台。</h1><p>连接千问，调用工具。<br>让每次任务都有记录，让文件留在工作区。</p><div class="login-credit">作者：周熠 <span>VERSION 0.1</span></div></div>
+    <form id="login-form" class="login-box">
+      <div class="brand-mark">G<span>↗</span></div><h2>进入工作台</h2><p class="muted">输入服务器为本项目生成的访问码。</p>
+      <label for="access-code">访问码</label><input id="access-code" type="password" autocomplete="current-password" required maxlength="256" placeholder="仅用于进入此工作台">
+      <p id="login-error" class="form-error" role="alert" hidden></p><button id="login-button" class="button primary" type="submit">登录工作台 <span aria-hidden="true">↗</span></button>
+      <p class="login-note">模型凭据由服务器管理，无需在此填写。</p>
+    </form>
+  </section>
+
+  <div id="workspace" class="workspace" hidden>
+    <button id="sidebar-backdrop" class="sidebar-backdrop" aria-label="关闭会话导航" hidden></button>
+    <aside id="sidebar" class="sidebar" aria-label="会话导航">
+      <a class="brand" href="/" aria-label="General Agent 首页"><span class="brand-mark small">G<span>↗</span></span><span>General Agent<small>个人智能体工作台</small></span></a>
+      <button id="new-session" class="button primary new-session"><span aria-hidden="true">＋</span> 新建会话</button>
+      <div class="section-label">最近会话 <span id="session-count">0</span></div>
+      <div id="sessions" class="sessions"></div>
+      <div class="sidebar-footer"><div class="connection-state"><span id="connection-dot" class="status-dot"></span><span id="model-label">正在连接模型</span></div><p>作者：周熠 <span>v0.1</span></p><button id="logout" class="text-button">退出工作台</button></div>
+    </aside>
+
+    <main class="main">
+      <header class="main-header"><button id="mobile-menu" class="icon-button mobile-only" aria-label="打开会话导航">☰</button><div class="header-title"><span class="eyebrow">WORKSPACE</span><h1 id="session-title">新的任务</h1></div><div class="header-actions"><span id="run-state" class="run-state">就绪</span><button id="toggle-inspector" class="button secondary compact" aria-expanded="true" aria-controls="inspector">过程与文件 <span aria-hidden="true">◫</span></button></div></header>
+      <div id="notice" class="notice" role="alert" hidden><span id="notice-text"></span><button id="dismiss-notice" aria-label="关闭提示">×</button></div>
+      <section id="conversation" class="conversation" aria-label="对话消息" tabindex="0">
+        <div id="welcome" class="welcome">
+          <div class="welcome-kicker"><span class="welcome-line"></span> LOCAL MODEL, REAL TOOLS</div>
+          <h2>从一个问题开始。</h2><p class="welcome-description">Agent 可以调用工具完成计算、阅读与整理文件，<br class="desktop-only">并保留每一步的执行记录。</p>
+          <div class="suggestions"><button class="suggestion" data-prompt="请用计算工具计算 (123+456)*7，然后将表达式和结果写入 result.txt，最后告诉我文件路径。"><span class="suggestion-icon" aria-hidden="true">∑</span><strong>计算并保存结果</strong><span>调用工具，生成工作区文件</span><b aria-hidden="true">↗</b></button><button class="suggestion" data-prompt="请先列出当前工作区文件，选择一个文本文件阅读并总结。如果工作区为空，请告诉我需要先上传文件。"><span class="suggestion-icon" aria-hidden="true">≡</span><strong>阅读并整理文件</strong><span>先检查实际输入，再给出总结</span><b aria-hidden="true">↗</b></button></div>
+          <div class="welcome-capabilities"><span>多轮对话</span><span>受控工具调用</span><span>独立文件工作区</span></div>
+        </div>
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <div id="working" class="working" role="status" hidden><span class="working-indicator"></span><div><strong id="working-title">任务执行中</strong><span id="working-description">正在请求模型，执行记录会显示在右侧。</span></div></div>
+        <div id="run-error" class="run-error" role="alert" hidden></div>
+      </section>
+      <div class="composer-area"><div id="upload-status" class="upload-status" role="status" hidden></div><form id="composer" class="composer"><label class="sr-only" for="prompt">向 Agent 发送任务</label><textarea id="prompt" rows="2" maxlength="12000" placeholder="描述你的任务，或先上传一个文本文件…"></textarea><div class="composer-bottom"><div class="composer-tools"><button id="upload-file" type="button" class="icon-button upload-button" title="上传 UTF-8 文本文件，最大64 KB" aria-label="上传文本文件"><span aria-hidden="true">＋</span><span>添加文件</span></button><input id="file-input" type="file" hidden><span class="input-hint">Enter 发送，Shift + Enter 换行</span></div><div class="send-actions"><button id="cancel-run" type="button" class="button cancel" hidden>停止任务</button><button id="send" class="button primary" type="submit">发送 <span aria-hidden="true">↑</span></button></div></div></form><p class="composer-note">工具仅访问当前会话工作区。结果请结合原始文件与执行记录核查。</p></div>
+    </main>
+
+    <aside id="inspector" class="inspector" aria-label="过程与文件">
+      <header class="inspector-header"><span>任务详情</span><button id="close-inspector" class="icon-button" aria-label="收起任务详情">×</button></header>
+      <div class="inspector-tabs" role="tablist" aria-label="任务详情分类"><button id="tab-trace" role="tab" aria-selected="true" aria-controls="panel-trace" data-tab="trace">运行轨迹</button><button id="tab-files" role="tab" aria-selected="false" aria-controls="panel-files" data-tab="files">工作区</button><button id="tab-tools" role="tab" aria-selected="false" aria-controls="panel-tools" data-tab="tools">工具</button></div>
+      <section id="panel-trace" class="inspector-panel" role="tabpanel" aria-labelledby="tab-trace"><label class="field-label" for="run-select">运行记录</label><select id="run-select" disabled><option>尚无运行记录</option></select><div id="run-summary" class="run-summary" hidden></div><div id="trace-empty" class="panel-empty"><span aria-hidden="true">↳</span><h3>等待首个任务</h3><p>这里会显示模型请求、工具调用和返回结果，不展示模型内部推理。</p></div><ol id="events" class="event-list"></ol></section>
+      <section id="panel-files" class="inspector-panel" role="tabpanel" aria-labelledby="tab-files" hidden><div class="panel-heading"><div><h2>会话文件</h2><p>每个会话使用独立目录。</p></div><button id="refresh-files" class="icon-button" aria-label="刷新工作区文件">↻</button></div><div id="file-breadcrumb" class="file-breadcrumb"></div><div id="files" class="files"></div><p class="panel-footnote">支持 UTF-8 文本文件，单文件最大64 KB。上传和写入均不覆盖已有文件。</p></section>
+      <section id="panel-tools" class="inspector-panel" role="tabpanel" aria-labelledby="tab-tools" hidden><div class="panel-heading"><div><h2>可用工具</h2><p>真实执行能力由服务器提供。</p></div></div><div id="tools" class="tools"></div><div class="tool-boundary"><strong>当前边界</strong><p>本版提供受控计算与文件工具。结构生物学工具可在此底座上逐项接入。</p></div></section>
+    </aside>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
