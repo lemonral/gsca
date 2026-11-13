@@ -88,7 +88,7 @@ def create_app(settings=None, provider=None):
         yield
         await runner.shutdown()
 
-    app = FastAPI(title="General Agent", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="GSCA · 通用结构计算 Agent", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.store, app.state.runner, app.state.registry = store, runner, registry
 
     def signature(value):
@@ -147,7 +147,7 @@ def create_app(settings=None, provider=None):
 
     @app.get("/api/health")
     async def health(request: Request):
-        return {"ok": True, "model": settings.model_name, "provider": "Ollama · 3184千问代理", "authenticated": authenticated(request), "version": "0.1.0"}
+        return {"ok": True, "project": "GSCA", "model": settings.model_name, "provider": "Ollama · 3184千问代理", "authenticated": authenticated(request), "version": "0.1.0"}
 
     @app.get("/api/model-health")
     async def model_health():

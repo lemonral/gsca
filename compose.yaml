@@ -1,10 +1,10 @@
-name: zhouyi-general-agent
+name: zhouyi-gsca
 
 services:
   agent:
     build:
       context: .
-    image: zhouyi/general-agent:0.1
+    image: zhouyi/gsca:0.1
     init: true
     restart: unless-stopped
     # Linux rootful Docker: the existing model proxy listens only on host loopback.

@@ -1,10 +1,26 @@
-# General Agent
+# GSCA · 通用结构计算 Agent
 
 **作者：周熠**
 
-连接千问的独立通用 Agent 工作台。模型根据任务选择工具，本地程序校验并执行，实际结果返回模型，会话、工具事件和文件持续保存。当前版本为单账号、单进程的开发底座，后续可以接入结构生物学工具。
+**GSCA（General Structural Computing Agent）**面向结构生物学研究，目标是把自然语言问题转化为具有明确输入输出约束、可执行并可核查的结构计算流程。“通用”指跨结构对象、分析任务和工具组合持续扩展。
 
-## 功能
+当前 **v0.1 实现了 Agent 运行底座和六个辅助工具**，连接千问并保存实际动作、结果与文件。结构专用工具、科学任务规格和领域验证器尚未接入。
+
+## 项目范围与实现状态
+
+| 层面 | 能力范围 | 当前状态 |
+| --- | --- | --- |
+| 运行底座 | 会话、模型与工具循环、预算、取消、状态与事件持久化 | 已实现 |
+| 辅助工具 | 数学计算、时间、受限文本文件读写和检索 | 已实现 |
+| 科学任务规格 | 对象、选择范围、单位/坐标、参数、输入输出与验收条件 | 待实现 |
+| 结构数据接入 | 序列、PDB/mmCIF、密度图、实验约束与轨迹 | 待接入 |
+| 结构分析 | 质量评估、检索、比较、界面/口袋、相互作用、对接、预测与设计 | 待接入 |
+| 实验与动态分析 | cryo-EM、晶体学、NMR/整合建模、动力学与统计分析 | 待接入 |
+| 领域验证 | 计算产物校验、方法适用性、不确定性与结论证据绑定 | 待实现 |
+
+上述任务族描述持续扩展的方向，不代表现有版本已经覆盖。新增能力按工具适配、任务约束、独立验证和参考任务逐项接入。当前文本上传上限为64 KiB，尚不构成通用结构文件输入支持。
+
+## 当前已实现功能
 
 - 多轮对话、会话创建与切换，中文桌面及手机界面。
 - 结构化工具调用，查看请求、参数、结果和任务状态。
@@ -56,8 +72,8 @@ flowchart LR
 ## 快速开始：个人目录运行
 
 ```bash
-git clone https://github.com/lemonral/general-agent.git
-cd general-agent
+git clone https://github.com/lemonral/gsca.git
+cd gsca
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
@@ -88,15 +104,15 @@ export AGENT_DATA_DIR="$PWD/data"
 ```bash
 .venv/bin/python scripts/install_native.py \
   --model-token-file /absolute/path/to/model-proxy-token
-systemctl --user status zhouyi-general-agent.service
+systemctl --user status zhouyi-gsca.service
 ```
 
 可用 `--bind-host`、`--port`、`--model-base-url`、`--model` 修改新配置。脚本保留已有 `.env`，在当前账号注册用户单元，不调用 sudo。需要随开机运行时，服务器还须允许该账号的 systemd 用户服务在退出登录后继续运行。
 
 ```bash
-systemctl --user restart zhouyi-general-agent.service
-systemctl --user stop zhouyi-general-agent.service
-journalctl --user -u zhouyi-general-agent.service -n 100 --no-pager
+systemctl --user restart zhouyi-gsca.service
+systemctl --user stop zhouyi-gsca.service
+journalctl --user -u zhouyi-gsca.service -n 100 --no-pager
 ```
 
 只能启动一个 Uvicorn worker。服务启动会把未结束运行标为 `interrupted`，不自动重放可能产生文件副作用的步骤。
@@ -126,7 +142,7 @@ PY
 5. 停止同项目的原生服务，再启动容器，避免共用数据库或争用端口：
 
 ```bash
-systemctl --user stop zhouyi-general-agent.service
+systemctl --user stop zhouyi-gsca.service
 ./scripts/manage.sh up
 ./scripts/manage.sh status
 ./scripts/manage.sh logs
@@ -134,7 +150,7 @@ systemctl --user stop zhouyi-general-agent.service
 
 Compose 使用 Linux `host` 网络访问主机回环地址上的模型代理，不挂载 Docker socket。容器以指定 UID/GID 运行，根文件系统只读，`data/` 单独挂载，凭据只读挂载。Rootless Docker 的 `host` 网络不一定等同物理主机网络，需要独立验证代理可达性，详见 [Docker Rootless 文档](https://docs.docker.com/engine/security/rootless/)。
 
-## 使用示例
+## 当前底座的使用与验证
 
 新建会话并输入：
 
@@ -194,4 +210,4 @@ requirements.txt
 
 备份时先停止本项目服务，再整体归档 `data/`。SQLite 使用 WAL，运行中仅复制数据库主文件可能遗漏状态；在线备份应使用 SQLite backup API。恢复前停止服务，恢复完整数据并检查所属 UID/GID。
 
-这版是通用 Agent 开发起点。多用户、分布式队列、领域计算及科学结论评估需要后续实现和验收。
+GSCA 当前交付的是通用结构计算 Agent 的运行底座。后续开发围绕科学任务规格、结构对象语义、计算工具适配与领域验证推进；多用户与分布式作业也需要单独实现和验收。

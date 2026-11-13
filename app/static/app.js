@@ -458,7 +458,7 @@ async function enterWorkspace(health) {
   });
   setInspector(window.innerWidth>1080);
   await Promise.all([refreshSessions(),loadTools()]);
-  const remembered=sessionStorage.getItem("general-agent-session");
+  const remembered=sessionStorage.getItem("gsca-session");
   const id=state.sessions.find(session=>session.id===remembered)?.id || state.sessions[0]?.id;
   if(id)await loadSession(id);
   else {state.sessionId=null;state.sessionReady=true;$("session-title").textContent="新的任务";renderMessages();renderRun(null,[]);updateControls();}
@@ -485,7 +485,7 @@ $("login-form").addEventListener("submit",async event=>{
   } catch(error) {$("login-error").textContent=error.message;$("login-error").hidden=false;}
   finally {$("login-button").disabled=false;}
 });
-$("logout").addEventListener("click",async()=>{try{await api("/api/logout",{method:"POST"});sessionStorage.removeItem("general-agent-session");showLogin();}catch(error){notify(error.message);}});
+$("logout").addEventListener("click",async()=>{try{await api("/api/logout",{method:"POST"});sessionStorage.removeItem("gsca-session");showLogin();}catch(error){notify(error.message);}});
 $("retry-connection").addEventListener("click",connect);
 $("new-session").addEventListener("click",async()=>{if(state.navigating||state.sending)return;try{await createSession();}catch(error){notify(error.message);}finally{updateControls();}});
 $("composer").addEventListener("submit",submitPrompt);
@@ -503,7 +503,7 @@ $("close-inspector").addEventListener("click",()=>setInspector(false));
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>setTab(button.dataset.tab));
 for(const button of document.querySelectorAll(".suggestion"))button.addEventListener("click",()=>{$("prompt").value=button.dataset.prompt;$("prompt").focus();$("prompt").dispatchEvent(new Event("input"));});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"){setSidebar(false);if(window.innerWidth<=1080)setInspector(false);}});
-window.addEventListener("beforeunload",()=>{if(state.sessionId)sessionStorage.setItem("general-agent-session",state.sessionId);});
+window.addEventListener("beforeunload",()=>{if(state.sessionId)sessionStorage.setItem("gsca-session",state.sessionId);});
 document.querySelector(".inspector-tabs").addEventListener("keydown",event=>{
   if(!["ArrowLeft","ArrowRight"].includes(event.key))return;event.preventDefault();
   const tabs=["trace","files","tools"];const index=tabs.indexOf(state.tab);const name=tabs[(index+(event.key==="ArrowRight"?1:2))%3];setTab(name);$("tab-"+name).focus();

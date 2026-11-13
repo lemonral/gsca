@@ -25,15 +25,15 @@ case "${1:-help}" in
     ;;
   test)
     if [ -x "$PROJECT_DIR/.venv/bin/python" ]; then
-      TEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/general-agent-tests.XXXXXX")
+      TEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/gsca-tests.XXXXXX")
       trap 'rm -rf "$TEST_DIR"' EXIT HUP INT TERM
       env AGENT_DATA_DIR="$TEST_DIR/data" APP_ACCESS_TOKEN_FILE="$TEST_DIR/access-token" \
         MODEL_TOKEN_FILE= MODEL_BASE_URL=http://127.0.0.1:9 \
         "$PROJECT_DIR/.venv/bin/python" -m unittest discover -s tests -v
     else
       compose run --rm --no-deps \
-        -e AGENT_DATA_DIR=/tmp/general-agent-tests \
-        -e APP_ACCESS_TOKEN_FILE=/tmp/general-agent-test-access \
+        -e AGENT_DATA_DIR=/tmp/gsca-tests \
+        -e APP_ACCESS_TOKEN_FILE=/tmp/gsca-test-access \
         -e MODEL_TOKEN_FILE= -e MODEL_BASE_URL=http://127.0.0.1:9 \
         agent python -m unittest discover -s tests -v
     fi
