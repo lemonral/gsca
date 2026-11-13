@@ -30,9 +30,9 @@ assert health["ok"] and not health["authenticated"]
 request("/api/login", {"token": (args.data_dir / "access-token").read_text().strip()})
 upstream = request("/api/model-health")
 assert upstream["ok"]
-session = request("/api/sessions", {"title": "验收 · 千问计算与文件闭环"})
+session = request("/api/sessions", {"title": "Acceptance: Qwen calculation and file loop"})
 run = request(f'/api/sessions/{session["id"]}/runs', {
-    "prompt": "请先调用calculate工具计算 (123+456)*7。将表达式和结果写入arithmetic-check.txt，然后必须调用read_file读回该文件验证。最后告诉我核实的结果和文件路径。"})
+    "prompt": "First call calculate to evaluate (123+456)*7. Write the expression and result to arithmetic-check.txt, then call read_file to read it back and verify it. Finally report the verified result and file path."})
 deadline = time.monotonic() + 260
 last_status = None
 while time.monotonic() < deadline:

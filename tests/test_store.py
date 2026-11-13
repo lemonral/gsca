@@ -9,18 +9,18 @@ class StoreTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.store = Store(self.tmp.name)
-        self.session = self.store.create_session("计算任务")
+        self.session = self.store.create_session("Calculation task")
 
     def test_persistence_and_incremental_events(self):
         sid = self.session["id"]
-        run = self.store.create_run(sid, "计算42*2")
+        run = self.store.create_run(sid, "Calculate 42*2")
         one = self.store.event(run["id"], "tool_call", {"name": "calculate"})
         two = self.store.event(run["id"], "tool_result", {"result": 84})
         self.store.add_message(sid, "assistant", "84", run["id"])
         self.store.set_run(run["id"], status="completed", steps=2, usage={"total_tokens": 12})
         reopened = Store(self.tmp.name)
         self.assertEqual(reopened.get_run(run["id"])["usage"], {"total_tokens": 12})
-        self.assertEqual([m["content"] for m in reopened.messages(sid)], ["计算42*2", "84"])
+        self.assertEqual([m["content"] for m in reopened.messages(sid)], ["Calculate 42*2", "84"])
         self.assertEqual(reopened.events(run["id"], after=one["id"]), [two])
         self.assertEqual(reopened.list_runs(sid)[0]["status"], "completed")
         self.assertEqual(reopened.list_sessions()[0]["id"], sid)
@@ -29,7 +29,7 @@ class StoreTests(unittest.TestCase):
         sid = self.session["id"]
         def create(i):
             try:
-                return self.store.create_run(sid, f"请求{i}")
+                return self.store.create_run(sid, f"Request {i}")
             except ValueError:
                 return None
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
@@ -38,13 +38,13 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(len(successful), 1)
         self.assertEqual(len(self.store.messages(sid)), 1)
         self.store.set_run(successful[0]["id"], status="completed")
-        self.assertEqual(self.store.create_run(sid, "后续请求")["status"], "queued")
+        self.assertEqual(self.store.create_run(sid, "Follow-up request")["status"], "queued")
 
     def test_recover_and_terminal_state_cannot_resurrect(self):
         sid = self.session["id"]
-        first = self.store.create_run(sid, "旧任务")
+        first = self.store.create_run(sid, "Previous task")
         self.store.set_run(first["id"], status="completed")
-        second = self.store.create_run(sid, "新任务")
+        second = self.store.create_run(sid, "New task")
         self.store.set_run(second["id"], status="running")
         self.assertEqual(self.store.recover(), 1)
         self.assertEqual(self.store.get_run(first["id"])["status"], "completed")
@@ -63,14 +63,14 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.store.messages("missing")
         run = self.store.create_run(self.session["id"], "hello")
-        second = self.store.create_session("另一个会话")
+        second = self.store.create_session("Another session")
         with self.assertRaises(ValueError):
-            self.store.add_message(second["id"], "assistant", "跨会话", run["id"])
+            self.store.add_message(second["id"], "assistant", "Cross-session message", run["id"])
         self.assertEqual(self.store.messages(second["id"]), [])
 
     def test_rename_and_validation(self):
-        renamed = self.store.rename_session(self.session["id"], " 新标题 ")
-        self.assertEqual(renamed["title"], "新标题")
+        renamed = self.store.rename_session(self.session["id"], " New title ")
+        self.assertEqual(renamed["title"], "New title")
         with self.assertRaises(ValueError):
             self.store.rename_session(self.session["id"], " ")
         run = self.store.create_run(self.session["id"], "hello")

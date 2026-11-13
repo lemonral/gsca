@@ -17,9 +17,9 @@ class ToolTests(unittest.TestCase):
         return self.tools.execute(name, args or {}, session)
 
     def test_files_and_session_isolation(self):
-        created = self.call("write_file", {"path": "notes/result.txt", "content": "结果84\nagent ready"})
+        created = self.call("write_file", {"path": "notes/result.txt", "content": "\u7ed3\u679c84\nagent ready"})
         self.assertEqual(created, {"path": "notes/result.txt", "bytes": 20})
-        self.assertEqual(self.call("read_file", {"path": created["path"]})["content"], "结果84\nagent ready")
+        self.assertEqual(self.call("read_file", {"path": created["path"]})["content"], "\u7ed3\u679c84\nagent ready")
         self.assertEqual(self.call("list_files", {"path": "notes"})["files"][0]["type"], "file")
         self.assertEqual(self.call("search_files", {"query": "AGENT"})["matches"][0]["line"], 2)
         self.assertEqual(self.call("list_files", session="session-2")["files"], [])
@@ -27,7 +27,7 @@ class ToolTests(unittest.TestCase):
             self.call("read_file", {"path": created["path"]}, session="session-2")
         with self.assertRaises(ToolError):
             self.call("write_file", {"path": created["path"], "content": "replace"})
-        self.assertEqual(self.call("read_file", {"path": created["path"]})["content"], "结果84\nagent ready")
+        self.assertEqual(self.call("read_file", {"path": created["path"]})["content"], "\u7ed3\u679c84\nagent ready")
 
     def test_reject_escaping_paths_and_invalid_sessions(self):
         for path in ["/etc/passwd", "../outside", "a/../x", "a\\x", "C:/outside", "\x00", "."]:
@@ -62,7 +62,7 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(MAX_FILE_BYTES, 65536)
         self.assertEqual(MAX_TOTAL_BYTES, 10 * 1024 * 1024)
         with self.assertRaises(ToolError):
-            self.call("write_file", {"path": "too-big.txt", "content": "中" * 30000})
+            self.call("write_file", {"path": "too-big.txt", "content": "\u4e2d" * 30000})
         self.call("write_file", {"path": "ok.txt", "content": "a" * 10})
         with patch("app.tools.MAX_TOTAL_BYTES", 15):
             with self.assertRaises(ToolError):

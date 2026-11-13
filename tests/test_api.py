@@ -17,7 +17,7 @@ class Provider:
         return {"status": "UP"}
 
     async def chat(self, messages, tools, remaining):
-        return {"role": "assistant", "content": "已收到：" + messages[-1]["content"]}, {"prompt_tokens": 100, "completion_tokens": 10}
+        return {"role": "assistant", "content": "Received: " + messages[-1]["content"]}, {"prompt_tokens": 100, "completion_tokens": 10}
 
 
 class APITests(unittest.TestCase):
@@ -40,7 +40,7 @@ class APITests(unittest.TestCase):
     def test_auth_session_logout_and_non_ascii_bad_code(self):
         self.assertEqual(self.client.get("/api/sessions").status_code, 401)
         self.assertFalse(self.client.get("/api/health").json()["authenticated"])
-        self.assertEqual(self.client.post("/api/login", json={"token": "错误口令"}).status_code, 401)
+        self.assertEqual(self.client.post("/api/login", json={"token": "\u9519\u8bef\u53e3\u4ee4"}).status_code, 401)
         self.login()
         self.assertTrue(self.client.get("/api/health").json()["authenticated"])
         self.assertEqual(self.client.get("/api/sessions").status_code, 200)
@@ -50,7 +50,7 @@ class APITests(unittest.TestCase):
     def test_run_complete_then_new_app_recovers_history(self):
         self.login()
         session = self.client.post("/api/sessions", json={}).json()
-        run = self.client.post(f'/api/sessions/{session["id"]}/runs', json={"prompt": "你好"}).json()
+        run = self.client.post(f'/api/sessions/{session["id"]}/runs', json={"prompt": "\u4f60\u597d"}).json()
         for _ in range(100):
             detail = self.client.get('/api/runs/' + run["id"]).json()
             if detail["run"]["status"] == "completed":
@@ -58,16 +58,16 @@ class APITests(unittest.TestCase):
             time.sleep(.01)
         self.assertEqual(detail["run"]["status"], "completed")
         result = self.client.get('/api/sessions/' + session["id"]).json()
-        self.assertEqual(result["messages"][-1]["content"], "已收到：你好")
+        self.assertEqual(result["messages"][-1]["content"], "Received: \u4f60\u597d")
         other = create_app(self.settings, Provider())
-        self.assertEqual(other.state.store.messages(session["id"])[-1]["content"], "已收到：你好")
+        self.assertEqual(other.state.store.messages(session["id"])[-1]["content"], "Received: \u4f60\u597d")
 
     def test_upload_read_no_overwrite_and_session_isolation(self):
         self.login()
         a, b = [self.client.post("/api/sessions", json={}).json()["id"] for _ in range(2)]
         url = f'/api/sessions/{a}/files'
-        self.assertEqual(self.client.post(url, json={"path": "x.txt", "content": "你好"}).status_code, 201)
-        self.assertEqual(self.client.get(url + '/content', params={"path": "x.txt"}).text, "你好")
+        self.assertEqual(self.client.post(url, json={"path": "x.txt", "content": "\u4f60\u597d"}).status_code, 201)
+        self.assertEqual(self.client.get(url + '/content', params={"path": "x.txt"}).text, "\u4f60\u597d")
         self.assertEqual(self.client.post(url, json={"path": "x.txt", "content": "changed"}).status_code, 400)
         self.assertEqual(self.client.post(url, json={"path": "../secret", "content": "bad"}).status_code, 400)
         self.assertEqual(self.client.get(f'/api/sessions/{b}/files').json()["files"], [])

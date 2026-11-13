@@ -2,8 +2,8 @@
 
 const $ = id => document.getElementById(id);
 const ACTIVE = new Set(["queued", "running", "cancelling", "pending"]);
-const statusNames = {queued:"排队中",pending:"排队中",running:"执行中",cancelling:"正在停止",completed:"已完成",succeeded:"已完成",failed:"执行失败",cancelled:"已停止",interrupted:"已中断",timed_out:"已超时"};
-const eventNames = {model_started:"请求模型",model_completed:"模型返回",tool_call:"调用工具",tool_result:"工具返回",run_status:"运行状态",error:"发生错误",assistant:"生成回复",run_started:"开始任务",run_completed:"完成任务",run_failed:"任务失败",run_cancelled:"任务停止"};
+const statusNames = {queued:"Queued",pending:"Queued",running:"Running",cancelling:"Stopping",completed:"Completed",succeeded:"Completed",failed:"Failed",cancelled:"Cancelled",interrupted:"Interrupted",timed_out:"Timed out"};
+const eventNames = {model_started:"Model request",model_completed:"Model response",tool_call:"Tool call",tool_result:"Tool result",run_status:"Run status",error:"Error",assistant:"Reply",run_started:"Task started",run_completed:"Task completed",run_failed:"Task failed",run_cancelled:"Task cancelled"};
 const state = {sessionId:null,epoch:0,sessions:[],runs:[],viewRunId:null,activeRunId:null,viewRun:null,messages:[],timer:null,sending:false,navigating:false,navigationToken:0,sessionReady:true,filePath:".",tab:"trace",authenticated:false};
 let toastTimer;
 
@@ -26,9 +26,9 @@ function dateValue(value) {
 function timeText(value, full = false) {
   const date = dateValue(value);
   if (!date) return "";
-  return date.toLocaleString("zh-CN", full ? {month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"} : {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  return date.toLocaleString("en-US", full ? {month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"} : {hour:"2-digit",minute:"2-digit",second:"2-digit"});
 }
-function statusText(status) {return statusNames[status] || status || "就绪";}
+function statusText(status) {return statusNames[status] || status || "Ready";}
 function notify(message) {
   $("notice-text").textContent = message;
   $("notice").hidden = false;
@@ -46,14 +46,14 @@ async function api(path, options = {}) {
   try {
     response = await fetch(path, {...options, headers, credentials:"same-origin"});
   } catch (_) {
-    throw new Error("连接中断，请检查网络后重试。任务可能仍在服务器执行。");
+    throw new Error("Connection lost. Check your network and try again. The task may still be running on the server.");
   }
   const contentType = response.headers.get("content-type") || "";
   const body = contentType.includes("json") ? await response.json() : await response.text();
   if (!response.ok) {
     if (response.status === 401 && path !== "/api/login") showLogin();
     const detail = typeof body === "object" ? (body.detail || body.error || body.message) : body;
-    const error = new Error(safeText(detail).slice(0, 1200) || `请求失败（${response.status}）`);
+    const error = new Error(safeText(detail).slice(0, 1200) || `Request failed (${response.status})`);
     error.status = response.status;
     throw error;
   }
@@ -82,9 +82,9 @@ function updateControls() {
   $("cancel-run").hidden = !state.activeRunId;
   $("cancel-run").disabled = !state.activeRunId;
   $("working").hidden = !busy || state.navigating;
-  $("prompt").placeholder = state.navigating ? "正在载入会话，请稍候…" : !state.sessionReady ? "会话未能载入，请点击左侧会话重试。" : busy ? "当前任务执行中，完成后可继续对话…" : "描述你的任务，或先上传一个文本文件…";
+  $("prompt").placeholder = state.navigating ? "Loading the session…" : !state.sessionReady ? "Session could not be loaded. Select it in the sidebar to retry." : busy ? "A task is running. You can continue when it finishes…" : "Describe your task, or upload a text file…";
   const status = busy ? (state.viewRun?.status && ACTIVE.has(state.viewRun.status) ? state.viewRun.status : "running") : state.viewRun?.status;
-  $("run-state").textContent = state.navigating ? "载入中" : !state.sessionReady ? "会话未载入" : statusText(status);
+  $("run-state").textContent = state.navigating ? "Loading" : !state.sessionReady ? "Session unavailable" : statusText(status);
   $("run-state").className = "run-state" + (busy && !state.navigating ? " active" : !state.sessionReady && !state.navigating || ["failed","interrupted","timed_out"].includes(status) ? " error" : "");
 }
 function beginNavigation() {
@@ -124,16 +124,16 @@ function renderSessions() {
   const host = $("sessions");
   host.replaceChildren();
   $("session-count").textContent = state.sessions.length;
-  if (!state.sessions.length) host.append(element("p", "sessions-empty", "创建第一个会话，开始一个新任务。"));
+  if (!state.sessions.length) host.append(element("p", "sessions-empty", "Create a session to start a new task."));
   for (const session of state.sessions) {
     const button = element("button", "session" + (session.id === state.sessionId ? " active" : ""));
     button.type = "button";
     button.disabled = state.navigating || state.sending;
     button.setAttribute("aria-current", session.id === state.sessionId ? "true" : "false");
-    button.title = session.title || "新会话";
+    button.title = session.title || "New session";
     button.append(element("span", "session-icon", "◧"));
     const copy = element("span", "session-copy");
-    copy.append(element("strong", "", session.title || "新会话"), element("small", "", timeText(session.updated_at || session.created_at, true)));
+    copy.append(element("strong", "", session.title || "New session"), element("small", "", timeText(session.updated_at || session.created_at, true)));
     button.append(copy);
     button.addEventListener("click", () => loadSession(session.id).catch(error => notify(error.message)));
     host.append(button);
@@ -146,11 +146,11 @@ function renderMessages() {
   $("welcome").hidden = visible.length > 0;
   for (const message of visible) {
     const article = element("article", "message " + message.role);
-    const avatar = element("div", "message-avatar", message.role === "user" ? "你" : message.role === "assistant" ? "A" : "·");
+    const avatar = element("div", "message-avatar", message.role === "user" ? "You" : message.role === "assistant" ? "A" : "·");
     avatar.setAttribute("aria-hidden", "true");
     const content = element("div", "message-content");
     const meta = element("div", "message-meta");
-    meta.append(element("span", "", message.role === "user" ? "你" : message.role === "assistant" ? "Agent" : "系统"));
+    meta.append(element("span", "", message.role === "user" ? "You" : message.role === "assistant" ? "Agent" : "System"));
     const time = element("time", "", timeText(message.created_at));
     const value = dateValue(message.created_at);
     if (value) time.dateTime = value.toISOString();
@@ -167,7 +167,7 @@ function renderRunSelect() {
   const select = $("run-select");
   select.replaceChildren();
   select.disabled = !state.runs.length;
-  if (!state.runs.length) select.append(element("option", "", "尚无运行记录"));
+  if (!state.runs.length) select.append(element("option", "", "No runs yet"));
   for (const run of state.runs) {
     const option = element("option", "", `${timeText(run.created_at, true)}  ${statusText(run.status)}`);
     option.value = run.id;
@@ -178,15 +178,15 @@ function renderRunSelect() {
 function eventSummary(event) {
   const payload = event.payload || {};
   if (typeof payload === "string") return payload.slice(0,160);
-  if (event.kind === "tool_call") return `${payload.name || payload.tool || "工具"}  ${safeText(payload.arguments || payload.args || {}).replace(/\n\s*/g," ").slice(0,100)}`;
+  if (event.kind === "tool_call") return `${payload.name || payload.tool || "Tool"}  ${safeText(payload.arguments || payload.args || {}).replace(/\n\s*/g," ").slice(0,100)}`;
   if (event.kind === "tool_result") {
     const result = payload.result;
-    const successful = result?.ok === false || payload.error ? "返回错误" : "已返回结果";
-    return `${payload.name || payload.tool || "工具"} · ${successful}`;
+    const successful = result?.ok === false || payload.error ? "Error returned" : "Result returned";
+    return `${payload.name || payload.tool || "Tool"} · ${successful}`;
   }
   if (event.kind === "run_status") return statusText(payload.status || payload.state) + (payload.error ? " · " + payload.error : "");
-  if (event.kind === "model_started") return payload.model ? String(payload.model) : "模型正在根据对话与工具结果选择下一步。";
-  if (event.kind === "model_completed") return payload.tool_calls ? `返回 ${Array.isArray(payload.tool_calls) ? payload.tool_calls.length : payload.tool_calls} 个工具调用` : "模型请求完成。";
+  if (event.kind === "model_started") return payload.model ? String(payload.model) : "The model is selecting its next action from the conversation and tool results.";
+  if (event.kind === "model_completed") return payload.tool_calls ? `Returned ${Array.isArray(payload.tool_calls) ? payload.tool_calls.length : payload.tool_calls} tool call(s)` : "Model request completed.";
   if (payload.error || payload.message || payload.status) return safeText(payload.error || payload.message || payload.status).slice(0,180);
   return "";
 }
@@ -201,12 +201,12 @@ function renderRun(run, events = []) {
   summary.hidden = !run;
   if (run) {
     summary.append(element("span", "metric status" + (["failed","interrupted","timed_out"].includes(run.status) ? " error" : ""), statusText(run.status)));
-    summary.append(element("span", "metric", `步骤 ${run.steps || 0}`));
+    summary.append(element("span", "metric", `Steps ${run.steps || 0}`));
     const usage = run.usage || {};
     const tokens = usage.total_tokens ?? ((usage.input_tokens || usage.prompt_tokens || 0) + (usage.output_tokens || usage.completion_tokens || 0));
-    if (tokens) summary.append(element("span", "metric", `${tokens.toLocaleString()} tokens`));
+    if (tokens) summary.append(element("span", "metric", `${tokens.toLocaleString("en-US")} tokens`));
     if (run.error) {
-      const error = element("span", "metric error", "查看错误详情");
+      const error = element("span", "metric error", "View error details");
       error.title = String(run.error);
       summary.append(error);
     }
@@ -221,17 +221,17 @@ function renderRun(run, events = []) {
     const detail = element("details");
     detail.dataset.eventId = String(event.id);
     detail.open = oldDetails.has(String(event.id));
-    detail.append(element("summary", "", "查看记录"), element("pre", "", safeText(event.payload)));
+    detail.append(element("summary", "", "View record"), element("pre", "", safeText(event.payload)));
     item.append(detail);
     host.append(item);
   }
   const error = run?.error;
   $("run-error").hidden = !error;
-  $("run-error").textContent = error ? `任务${statusText(run.status)}\n${safeText(error)}` : "";
+  $("run-error").textContent = error ? `Task ${statusText(run.status).toLowerCase()}\n${safeText(error)}` : "";
   const latest = events[events.length-1];
   if (state.activeRunId) {
-    $("working-title").textContent = latest ? (eventNames[latest.kind] || "任务执行中") : "任务执行中";
-    $("working-description").textContent = latest?.kind === "tool_call" ? `${latest.payload?.name || "工具"} 正在执行，完成后将继续处理任务。` : "正在使用模型与工具，执行记录会持续更新。";
+    $("working-title").textContent = latest ? (eventNames[latest.kind] || "Task running") : "Task running";
+    $("working-description").textContent = latest?.kind === "tool_call" ? `${latest.payload?.name || "Tool"} is running. The task will continue after it returns.` : "Using the model and tools. Execution records update as the task progresses.";
   }
   updateControls();
 }
@@ -258,12 +258,12 @@ async function loadSession(id, navigationToken) {
   $("notice").hidden = true;
   $("upload-status").hidden = true;
   setSidebar(false);
-  $("session-title").textContent = "正在载入…";
+  $("session-title").textContent = "Loading…";
   renderMessages();renderRunSelect();renderRun(null,[]);renderSessions();
   try {
     const data = await api(`/api/sessions/${encodeURIComponent(id)}`);
     if (epoch !== state.epoch || token !== state.navigationToken) return;
-    $("session-title").textContent = data.session?.title || "新会话";
+    $("session-title").textContent = data.session?.title || "New session";
     state.sessionReady = true;
     state.messages = data.messages || [];
     state.runs = sortedRuns(data.runs || []);
@@ -274,7 +274,7 @@ async function loadSession(id, navigationToken) {
     if (state.activeRunId) schedulePoll(state.activeRunId,epoch);
     if (state.tab === "files") await loadFiles();
   } catch (error) {
-    if (epoch === state.epoch && !state.sessionReady) $("session-title").textContent = "会话载入失败";
+    if (epoch === state.epoch && !state.sessionReady) $("session-title").textContent = "Session could not be loaded";
     throw error;
   } finally {
     if (ownsNavigation && epoch === state.epoch) endNavigation(token);
@@ -284,7 +284,7 @@ async function createSession() {
   if (state.navigating) return null;
   const token = beginNavigation();
   try {
-    const session = await api("/api/sessions",{method:"POST",body:JSON.stringify({title:"新会话"})});
+    const session = await api("/api/sessions",{method:"POST",body:JSON.stringify({title:"New session"})});
     if (token !== state.navigationToken || !state.authenticated) return null;
     await refreshSessions();
     if (token !== state.navigationToken || !state.authenticated) return null;
@@ -320,13 +320,13 @@ function schedulePoll(id,epoch,delay=1000) {
       if (state.epoch !== epoch) return;
       state.messages = data.messages || [];
       state.runs = sortedRuns(data.runs || []);
-      $("session-title").textContent = data.session?.title || "新会话";
+      $("session-title").textContent = data.session?.title || "New session";
       renderMessages();renderRunSelect();updateControls();scrollToBottom();
       await refreshSessions();
       if (state.tab === "files") await loadFiles();
     } catch (error) {
       if (state.epoch !== epoch || !state.authenticated) return;
-      notify(error.message + " 正在尝试重新获取任务状态。");
+      notify(error.message + " Retrying task status retrieval.");
       schedulePoll(id,epoch,4000);
     }
   },delay);
@@ -353,7 +353,7 @@ async function submitPrompt(event) {
     if (state.epoch !== epoch) return;
     state.messages = data.messages || [];
     state.runs = sortedRuns(data.runs || state.runs);
-    $("session-title").textContent = data.session?.title || "新会话";
+    $("session-title").textContent = data.session?.title || "New session";
     renderMessages();renderRunSelect();renderRun(run,[]);scrollToBottom();
     if (window.innerWidth > 1080) setInspector(true);
     setTab("trace");
@@ -372,13 +372,13 @@ async function loadFiles() {
   const epoch = state.epoch;
   const path = state.filePath;
   const host = $("files");
-  if (!id) {host.replaceChildren(element("p","file-empty","创建会话后，可上传文本文件或让 Agent 生成文件。"));$("file-breadcrumb").replaceChildren();return;}
+  if (!id) {host.replaceChildren(element("p","file-empty","Create a session to upload text files or let the agent create them."));$("file-breadcrumb").replaceChildren();return;}
   const data = await api(`/api/sessions/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path)}`);
   if (epoch !== state.epoch || path !== state.filePath) return;
   const files = Array.isArray(data) ? data : data.files || data.entries || [];
   host.replaceChildren();
   const breadcrumb = $("file-breadcrumb");breadcrumb.replaceChildren();
-  const root = element("button","","工作区");root.addEventListener("click",()=>openDirectory("."));breadcrumb.append(root);
+  const root = element("button","","Workspace");root.addEventListener("click",()=>openDirectory("."));breadcrumb.append(root);
   if (path !== ".") {
     let partial = "";
     for (const part of path.split("/").filter(Boolean)) {
@@ -388,7 +388,7 @@ async function loadFiles() {
       const button = element("button","",part);button.addEventListener("click",()=>openDirectory(target));breadcrumb.append(button);
     }
   }
-  if (!files.length) host.append(element("p","file-empty","目录中暂无文件。可在对话框添加文本文件，或让 Agent 创建一个文件。"));
+  if (!files.length) host.append(element("p","file-empty","No files in this directory. Add a text file or ask the agent to create one."));
   for (const file of files) {
     const filePath = file.path || (path === "." ? file.name : path + "/" + file.name);
     const directory = ["dir","directory","folder"].includes(file.type) || file.is_dir === true;
@@ -397,8 +397,8 @@ async function loadFiles() {
     const item = element(directory ? "button" : "a","",file.name || filePath.split("/").pop());item.title = filePath;
     if (directory) item.addEventListener("click",()=>openDirectory(filePath));
     else {item.href=`/api/sessions/${encodeURIComponent(id)}/files/content?path=${encodeURIComponent(filePath)}`;item.target="_blank";item.rel="noopener noreferrer";}
-    info.append(item,element("small","",directory ? "目录" : Number.isFinite(file.size) ? (file.size < 1024 ? file.size + " B" : (file.size / 1024).toFixed(1) + " KB") : "文本文件"));row.append(info);
-    if (!directory) {const link=element("a","file-link","↗");link.href=item.href;link.target="_blank";link.rel="noopener noreferrer";link.setAttribute("aria-label","打开文件 "+filePath);row.append(link);}
+    info.append(item,element("small","",directory ? "Directory" : Number.isFinite(file.size) ? (file.size < 1024 ? file.size + " B" : (file.size / 1024).toFixed(1) + " KB") : "Text file"));row.append(info);
+    if (!directory) {const link=element("a","file-link","↗");link.href=item.href;link.target="_blank";link.rel="noopener noreferrer";link.setAttribute("aria-label","Open file "+filePath);row.append(link);}
     host.append(row);
   }
 }
@@ -406,15 +406,15 @@ function openDirectory(path) {state.filePath=path;loadFiles().catch(error=>notif
 async function uploadFile(file) {
   if (!file || state.activeRunId || state.sending || state.navigating || !state.sessionReady) return;
   const selectedEpoch = state.epoch;
-  if (file.size > 65536) {notify("文件超过64 KB，请选择较小的文本文件。");return;}
+  if (file.size > 65536) {notify("This file exceeds 64 KB. Choose a smaller text file.");return;}
   let content;
   try {content = new TextDecoder("utf-8",{fatal:true}).decode(await file.arrayBuffer());}
-  catch (_) {notify("当前仅支持 UTF-8 编码的文本文件。");return;}
+  catch (_) {notify("Only UTF-8 text files are supported.");return;}
   if (selectedEpoch !== state.epoch || state.navigating || state.sending || state.activeRunId || !state.sessionReady) {
-    toast("会话状态已改变，请在当前会话重新选择文件。");
+    toast("The session changed. Select the file again in the current session.");
     return;
   }
-  if (content.includes("\u0000")) {notify("文件包含二进制内容，请选择 UTF-8 文本文件。");return;}
+  if (content.includes("\u0000")) {notify("This file contains binary data. Choose a UTF-8 text file.");return;}
   state.sending=true;updateControls();
   let epoch;
   try {
@@ -422,11 +422,11 @@ async function uploadFile(file) {
     state.sending=true;updateControls();epoch=state.epoch;
     await api(`/api/sessions/${encodeURIComponent(state.sessionId)}/files`,{method:"POST",body:JSON.stringify({path:file.name,content})});
     if (epoch !== state.epoch) return;
-    $("upload-status").textContent=`已添加 ${file.name}，可在任务中直接提到此文件名。`;
+    $("upload-status").textContent=`Added ${file.name}. You can refer to this filename in your task.`;
     $("upload-status").hidden=false;
     state.filePath=".";
     setTab("files");if(window.innerWidth>1080)setInspector(true);
-    toast("文件已添加至当前会话工作区。");
+    toast("File added to this session workspace.");
     $("prompt").focus();
   } catch (error) {if(epoch===undefined||state.epoch===epoch)notify(error.message);}
   finally {if(epoch===undefined||state.epoch===epoch){state.sending=false;updateControls();}$("file-input").value="";}
@@ -444,27 +444,27 @@ async function loadTools() {
 async function enterWorkspace(health) {
   state.authenticated=true;
   $("login-screen").hidden=true;$("connection-screen").hidden=true;$("workspace").hidden=false;
-  $("model-label").textContent=health.model || "千问模型";
-  $("model-label").title="已载入模型配置，正在检查连接。";
+  $("model-label").textContent=health.model || "Qwen model";
+  $("model-label").title="Model configured. Checking the connection.";
   $("connection-dot").classList.add("offline");
   api("/api/model-health").then(result=>{
     if (!state.authenticated) return;
     $("connection-dot").classList.toggle("offline",result.ok !== true);
-    $("model-label").title=result.ok === true ? "模型接口可达。" : "模型接口当前不可用，运行时会返回具体错误。";
+    $("model-label").title=result.ok === true ? "Model endpoint reachable." : "Model endpoint unavailable. Tasks will report the connection error.";
   }).catch(()=>{
     if (!state.authenticated) return;
     $("connection-dot").classList.add("offline");
-    $("model-label").title="模型已配置，但暂未确认接口可达。";
+    $("model-label").title="Model configured, but its endpoint has not been confirmed reachable.";
   });
   setInspector(window.innerWidth>1080);
   await Promise.all([refreshSessions(),loadTools()]);
   const remembered=sessionStorage.getItem("gsca-session");
   const id=state.sessions.find(session=>session.id===remembered)?.id || state.sessions[0]?.id;
   if(id)await loadSession(id);
-  else {state.sessionId=null;state.sessionReady=true;$("session-title").textContent="新的任务";renderMessages();renderRun(null,[]);updateControls();}
+  else {state.sessionId=null;state.sessionReady=true;$("session-title").textContent="New task";renderMessages();renderRun(null,[]);updateControls();}
 }
 async function connect() {
-  $("connection-screen").hidden=false;$("retry-connection").hidden=true;$("connection-message").textContent="正在连接工作台…";
+  $("connection-screen").hidden=false;$("retry-connection").hidden=true;$("connection-message").textContent="Connecting to the workspace…";
   try {
     const health=await api("/api/health");
     if(health.authenticated===false){showLogin();return;}
@@ -491,7 +491,7 @@ $("new-session").addEventListener("click",async()=>{if(state.navigating||state.s
 $("composer").addEventListener("submit",submitPrompt);
 $("prompt").addEventListener("keydown",event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.isComposing){event.preventDefault();$("composer").requestSubmit();}});
 $("prompt").addEventListener("input",()=>{$("prompt").style.height="auto";$("prompt").style.height=Math.min($("prompt").scrollHeight,180)+"px";});
-$("cancel-run").addEventListener("click",async()=>{const id=state.activeRunId;if(!id)return;$("cancel-run").disabled=true;try{await api(`/api/runs/${encodeURIComponent(id)}/cancel`,{method:"POST"});toast("已请求停止任务。");schedulePoll(id,state.epoch,100);}catch(error){notify(error.message);$("cancel-run").disabled=false;}});
+$("cancel-run").addEventListener("click",async()=>{const id=state.activeRunId;if(!id)return;$("cancel-run").disabled=true;try{await api(`/api/runs/${encodeURIComponent(id)}/cancel`,{method:"POST"});toast("Task cancellation requested.");schedulePoll(id,state.epoch,100);}catch(error){notify(error.message);$("cancel-run").disabled=false;}});
 $("run-select").addEventListener("change",async event=>{const id=event.target.value;state.viewRunId=id;try{await fetchRun(id,state.epoch);}catch(error){notify(error.message);}});
 $("upload-file").addEventListener("click",()=>$("file-input").click());
 $("file-input").addEventListener("change",event=>uploadFile(event.target.files[0]));

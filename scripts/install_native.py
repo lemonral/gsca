@@ -48,7 +48,7 @@ if not env.exists():
         stream.write("".join(k + "=" + v + "\n" for k, v in contents.items()))
 unit_dir = Path.home() / ".config/systemd/user"
 unit_dir.mkdir(parents=True, exist_ok=True)
-unit = unit_dir / "zhouyi-gsca.service"
+unit = unit_dir / "gsca.service"
 unit.write_text(f"""[Unit]
 Description=GSCA - General Structural Computing Agent
 After=network-online.target

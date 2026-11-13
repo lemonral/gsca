@@ -1,60 +1,60 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>GSCA · 周熠</title>
+  <title>GSCA · Structural Computing</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
   <section id="connection-screen" class="screen" aria-live="polite">
-    <div class="connection-box"><div class="brand-mark">G<span>↗</span></div><h1>GSCA</h1><p id="connection-message">正在连接工作台…</p><button id="retry-connection" class="button secondary" hidden>重新连接</button></div>
+    <div class="connection-box"><div class="brand-mark">G<span>↗</span></div><h1>GSCA</h1><p id="connection-message">Connecting to the workspace…</p><button id="retry-connection" class="button secondary" hidden>Reconnect</button></div>
   </section>
   <section id="login-screen" class="screen" hidden>
-    <div class="login-intro"><span class="eyebrow">GENERAL STRUCTURAL COMPUTING AGENT</span><h1>通用结构<br>计算 Agent。</h1><p>面向结构生物学研究。<br>从问题澄清到可执行、可核查的计算流程。</p><div class="login-credit">作者：周熠 <span>VERSION 0.1</span></div></div>
+    <div class="login-intro"><span class="eyebrow">GENERAL STRUCTURAL COMPUTING AGENT</span><h1>Structural<br> computing.</h1><p>A workspace for structural biology.<br>From clear questions to executable, verifiable workflows.</p><div class="login-version">VERSION 0.1</div></div>
     <form id="login-form" class="login-box">
-      <div class="brand-mark">G<span>↗</span></div><h2>进入工作台</h2><p class="muted">输入服务器为本项目生成的访问码。</p>
-      <label for="access-code">访问码</label><input id="access-code" type="password" autocomplete="current-password" required maxlength="256" placeholder="仅用于进入此工作台">
-      <p id="login-error" class="form-error" role="alert" hidden></p><button id="login-button" class="button primary" type="submit">登录工作台 <span aria-hidden="true">↗</span></button>
-      <p class="login-note">模型凭据由服务器管理，无需在此填写。</p>
+      <div class="brand-mark">G<span>↗</span></div><h2>Open your workspace</h2><p class="muted">Enter the access code generated for this deployment.</p>
+      <label for="access-code">Access code</label><input id="access-code" type="password" autocomplete="current-password" required maxlength="256" placeholder="Workspace access code">
+      <p id="login-error" class="form-error" role="alert" hidden></p><button id="login-button" class="button primary" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+      <p class="login-note">Model credentials stay on the server. Do not enter them here.</p>
     </form>
   </section>
 
   <div id="workspace" class="workspace" hidden>
-    <button id="sidebar-backdrop" class="sidebar-backdrop" aria-label="关闭会话导航" hidden></button>
-    <aside id="sidebar" class="sidebar" aria-label="会话导航">
-      <a class="brand" href="/" aria-label="GSCA 首页"><span class="brand-mark small">G<span>↗</span></span><span>GSCA<small>通用结构计算 Agent</small></span></a>
-      <button id="new-session" class="button primary new-session"><span aria-hidden="true">＋</span> 新建会话</button>
-      <div class="section-label">最近会话 <span id="session-count">0</span></div>
+    <button id="sidebar-backdrop" class="sidebar-backdrop" aria-label="Close session navigation" hidden></button>
+    <aside id="sidebar" class="sidebar" aria-label="Session navigation">
+      <a class="brand" href="/" aria-label="GSCA home"><span class="brand-mark small">G<span>↗</span></span><span>GSCA<small>Structural computing agent</small></span></a>
+      <button id="new-session" class="button primary new-session"><span aria-hidden="true">＋</span> New session</button>
+      <div class="section-label">Recent sessions <span id="session-count">0</span></div>
       <div id="sessions" class="sessions"></div>
-      <div class="sidebar-footer"><div class="connection-state"><span id="connection-dot" class="status-dot"></span><span id="model-label">正在连接模型</span></div><p>作者：周熠 <span>v0.1</span></p><button id="logout" class="text-button">退出工作台</button></div>
+      <div class="sidebar-footer"><div class="connection-state"><span id="connection-dot" class="status-dot"></span><span id="model-label">Checking model connection</span></div><p>Development release <span>v0.1</span></p><button id="logout" class="text-button">Sign out</button></div>
     </aside>
 
     <main class="main">
-      <header class="main-header"><button id="mobile-menu" class="icon-button mobile-only" aria-label="打开会话导航">☰</button><div class="header-title"><span class="eyebrow">WORKSPACE</span><h1 id="session-title">新的任务</h1></div><div class="header-actions"><span id="run-state" class="run-state">就绪</span><button id="toggle-inspector" class="button secondary compact" aria-expanded="true" aria-controls="inspector">过程与文件 <span aria-hidden="true">◫</span></button></div></header>
-      <div id="notice" class="notice" role="alert" hidden><span id="notice-text"></span><button id="dismiss-notice" aria-label="关闭提示">×</button></div>
-      <section id="conversation" class="conversation" aria-label="对话消息" tabindex="0">
+      <header class="main-header"><button id="mobile-menu" class="icon-button mobile-only" aria-label="Open session navigation">☰</button><div class="header-title"><span class="eyebrow">WORKSPACE</span><h1 id="session-title">New task</h1></div><div class="header-actions"><span id="run-state" class="run-state">Ready</span><button id="toggle-inspector" class="button secondary compact" aria-expanded="true" aria-controls="inspector">Trace &amp; files <span aria-hidden="true">◫</span></button></div></header>
+      <div id="notice" class="notice" role="alert" hidden><span id="notice-text"></span><button id="dismiss-notice" aria-label="Dismiss notice">×</button></div>
+      <section id="conversation" class="conversation" aria-label="Conversation" tabindex="0">
         <div id="welcome" class="welcome">
           <div class="welcome-kicker"><span class="welcome-line"></span> STRUCTURAL BIOLOGY / COMPUTING</div>
-          <h2>从一个结构问题开始。</h2><p class="welcome-description">面向结构生物学计算的 Agent。当前 v0.1 已实现运行底座与辅助工具，<br class="desktop-only">结构分析工具和领域验证器将逐项接入。</p>
-          <div class="suggestions"><button class="suggestion" data-prompt="请用计算工具计算 (123+456)*7，然后将表达式和结果写入 result.txt，最后告诉我文件路径。"><span class="suggestion-icon" aria-hidden="true">∑</span><strong>验证辅助工具执行链</strong><span>计算、写文件并检查实际结果</span><b aria-hidden="true">↗</b></button><button class="suggestion" data-prompt="我想比较两个蛋白复合物的界面差异。请梳理需要的输入文件、链和残基选择、参数与验证条件，明确说明哪些结构计算工具尚未接入，不要编造计算结果。"><span class="suggestion-icon" aria-hidden="true">≡</span><strong>梳理结构比较需求</strong><span>明确输入、对象选择和验收条件</span><b aria-hidden="true">↗</b></button></div>
-          <div class="welcome-capabilities"><span>结构问题澄清</span><span>受控辅助工具</span><span>实际运行记录</span></div>
+          <h2>Start with a structure.</h2><p class="welcome-description">v0.1 provides the agent runtime and utility tools.<br class="desktop-only"> Structure-specific analysis and scientific validators are planned.</p>
+          <div class="suggestions"><button class="suggestion" data-prompt="Use calculate to compute (123+456)*7. Write the expression and result to result.txt, then read the file to verify it. Report the result and file path."><span class="suggestion-icon" aria-hidden="true">∑</span><strong>Test the tool loop</strong><span>Calculate, write a file and verify its contents</span><b aria-hidden="true">↗</b></button><button class="suggestion" data-prompt="I want to compare the interfaces of two protein complexes. Identify the required input files, chain and residue selections, parameters, and acceptance criteria. State which structural computing tools are not yet integrated. Do not invent computational results."><span class="suggestion-icon" aria-hidden="true">≡</span><strong>Plan a structure comparison</strong><span>Clarify inputs, selections and validation</span><b aria-hidden="true">↗</b></button></div>
+          <div class="welcome-capabilities"><span>Task clarification</span><span>Controlled utility tools</span><span>Recorded execution</span></div>
         </div>
         <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
-        <div id="working" class="working" role="status" hidden><span class="working-indicator"></span><div><strong id="working-title">任务执行中</strong><span id="working-description">正在请求模型，执行记录会显示在右侧。</span></div></div>
+        <div id="working" class="working" role="status" hidden><span class="working-indicator"></span><div><strong id="working-title">Task running</strong><span id="working-description">Requesting the model. Execution records appear in the trace panel.</span></div></div>
         <div id="run-error" class="run-error" role="alert" hidden></div>
       </section>
-      <div class="composer-area"><div id="upload-status" class="upload-status" role="status" hidden></div><form id="composer" class="composer"><label class="sr-only" for="prompt">向 Agent 发送任务</label><textarea id="prompt" rows="2" maxlength="12000" placeholder="描述你的任务，或先上传一个文本文件…"></textarea><div class="composer-bottom"><div class="composer-tools"><button id="upload-file" type="button" class="icon-button upload-button" title="上传 UTF-8 文本文件，最大64 KB" aria-label="上传文本文件"><span aria-hidden="true">＋</span><span>添加文件</span></button><input id="file-input" type="file" hidden><span class="input-hint">Enter 发送，Shift + Enter 换行</span></div><div class="send-actions"><button id="cancel-run" type="button" class="button cancel" hidden>停止任务</button><button id="send" class="button primary" type="submit">发送 <span aria-hidden="true">↑</span></button></div></div></form><p class="composer-note">工具仅访问当前会话工作区。结果请结合原始文件与执行记录核查。</p></div>
+      <div class="composer-area"><div id="upload-status" class="upload-status" role="status" hidden></div><form id="composer" class="composer"><label class="sr-only" for="prompt">Send a task to GSCA</label><textarea id="prompt" rows="2" maxlength="12000" placeholder="Describe your task, or upload a text file…"></textarea><div class="composer-bottom"><div class="composer-tools"><button id="upload-file" type="button" class="icon-button upload-button" title="Upload a UTF-8 text file, up to 64 KB" aria-label="Upload text file"><span aria-hidden="true">＋</span><span>Add file</span></button><input id="file-input" type="file" hidden><span class="input-hint">Enter to send · Shift + Enter for a new line</span></div><div class="send-actions"><button id="cancel-run" type="button" class="button cancel" hidden>Stop</button><button id="send" class="button primary" type="submit">Send <span aria-hidden="true">↑</span></button></div></div></form><p class="composer-note">Tools access this session's workspace only. Check results against source files and execution records.</p></div>
     </main>
 
-    <aside id="inspector" class="inspector" aria-label="过程与文件">
-      <header class="inspector-header"><span>任务详情</span><button id="close-inspector" class="icon-button" aria-label="收起任务详情">×</button></header>
-      <div class="inspector-tabs" role="tablist" aria-label="任务详情分类"><button id="tab-trace" role="tab" aria-selected="true" aria-controls="panel-trace" data-tab="trace">运行轨迹</button><button id="tab-files" role="tab" aria-selected="false" aria-controls="panel-files" data-tab="files">工作区</button><button id="tab-tools" role="tab" aria-selected="false" aria-controls="panel-tools" data-tab="tools">工具</button></div>
-      <section id="panel-trace" class="inspector-panel" role="tabpanel" aria-labelledby="tab-trace"><label class="field-label" for="run-select">运行记录</label><select id="run-select" disabled><option>尚无运行记录</option></select><div id="run-summary" class="run-summary" hidden></div><div id="trace-empty" class="panel-empty"><span aria-hidden="true">↳</span><h3>等待首个任务</h3><p>这里会显示模型请求、工具调用和返回结果，不展示模型内部推理。</p></div><ol id="events" class="event-list"></ol></section>
-      <section id="panel-files" class="inspector-panel" role="tabpanel" aria-labelledby="tab-files" hidden><div class="panel-heading"><div><h2>会话文件</h2><p>每个会话使用独立目录。</p></div><button id="refresh-files" class="icon-button" aria-label="刷新工作区文件">↻</button></div><div id="file-breadcrumb" class="file-breadcrumb"></div><div id="files" class="files"></div><p class="panel-footnote">支持 UTF-8 文本文件，单文件最大64 KB。上传和写入均不覆盖已有文件。</p></section>
-      <section id="panel-tools" class="inspector-panel" role="tabpanel" aria-labelledby="tab-tools" hidden><div class="panel-heading"><div><h2>可用工具</h2><p>真实执行能力由服务器提供。</p></div></div><div id="tools" class="tools"></div><div class="tool-boundary"><strong>当前边界</strong><p>v0.1 提供会话运行底座及计算、文件辅助工具。结构数据解析、科学 TaskSpec、专用计算与领域验证尚未实现。</p></div></section>
+    <aside id="inspector" class="inspector" aria-label="Trace and files">
+      <header class="inspector-header"><span>Task details</span><button id="close-inspector" class="icon-button" aria-label="Close task details">×</button></header>
+      <div class="inspector-tabs" role="tablist" aria-label="Task detail views"><button id="tab-trace" role="tab" aria-selected="true" aria-controls="panel-trace" data-tab="trace">Trace</button><button id="tab-files" role="tab" aria-selected="false" aria-controls="panel-files" data-tab="files">Files</button><button id="tab-tools" role="tab" aria-selected="false" aria-controls="panel-tools" data-tab="tools">Tools</button></div>
+      <section id="panel-trace" class="inspector-panel" role="tabpanel" aria-labelledby="tab-trace"><label class="field-label" for="run-select">Run history</label><select id="run-select" disabled><option>No runs yet</option></select><div id="run-summary" class="run-summary" hidden></div><div id="trace-empty" class="panel-empty"><span aria-hidden="true">↳</span><h3>Ready for the first task</h3><p>Model requests, tool calls and actual results appear here. Internal model reasoning is not shown.</p></div><ol id="events" class="event-list"></ol></section>
+      <section id="panel-files" class="inspector-panel" role="tabpanel" aria-labelledby="tab-files" hidden><div class="panel-heading"><div><h2>Session files</h2><p>Each session has a separate directory.</p></div><button id="refresh-files" class="icon-button" aria-label="Refresh workspace files">↻</button></div><div id="file-breadcrumb" class="file-breadcrumb"></div><div id="files" class="files"></div><p class="panel-footnote">UTF-8 text files only, up to 64 KB each. Uploads and tool writes never overwrite existing files.</p></section>
+      <section id="panel-tools" class="inspector-panel" role="tabpanel" aria-labelledby="tab-tools" hidden><div class="panel-heading"><div><h2>Available tools</h2><p>Registered execution capabilities.</p></div></div><div id="tools" class="tools"></div><div class="tool-boundary"><strong>Current scope</strong><p>v0.1 includes the session runtime and calculation/file utilities. Structure parsing, scientific task specifications, domain tools and scientific validation are not yet implemented.</p></div></section>
     </aside>
   </div>
   <div id="toast" class="toast" role="status" hidden></div>

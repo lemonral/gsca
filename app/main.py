@@ -28,7 +28,7 @@ class Login(Input):
 
 
 class SessionInput(Input):
-    title: str = Field(default="新会话", min_length=1, max_length=80)
+    title: str = Field(default="New session", min_length=1, max_length=80)
 
 
 class RunInput(Input):
@@ -55,7 +55,7 @@ class BodyLimitMiddleware:
                 return
             chunk = message.get("body", b"")
             if len(body) + len(chunk) > self.limit:
-                return await JSONResponse({"detail": "请求过大"}, status_code=413)(scope, receive, send)
+                return await JSONResponse({"detail": "Request body is too large"}, status_code=413)(scope, receive, send)
             body.extend(chunk)
             if not message.get("more_body", False):
                 break
@@ -88,7 +88,7 @@ def create_app(settings=None, provider=None):
         yield
         await runner.shutdown()
 
-    app = FastAPI(title="GSCA · 通用结构计算 Agent", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="GSCA - General Structural Computing Agent", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.store, app.state.runner, app.state.registry = store, runner, registry
 
     def signature(value):
@@ -110,19 +110,19 @@ def create_app(settings=None, provider=None):
         try:
             length = int(request.headers.get("content-length", "0"))
         except ValueError:
-            return JSONResponse({"detail": "无效请求长度"}, status_code=400)
+            return JSONResponse({"detail": "Invalid request length"}, status_code=400)
         if length < 0 or length > 100000:
-            return JSONResponse({"detail": "请求过大"}, status_code=413)
+            return JSONResponse({"detail": "Request body is too large"}, status_code=413)
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             # Browser clients must use same-origin JSON; no cross-origin cookie writes.
             origin = request.headers.get("origin")
             if origin and urlsplit(origin).netloc != request.headers.get("host"):
-                return JSONResponse({"detail": "不接受跨站请求"}, status_code=403)
+                return JSONResponse({"detail": "Cross-site requests are not accepted"}, status_code=403)
             if request.headers.get("sec-fetch-site") == "cross-site":
-                return JSONResponse({"detail": "不接受跨站请求"}, status_code=403)
+                return JSONResponse({"detail": "Cross-site requests are not accepted"}, status_code=403)
         if request.url.path.startswith("/api/") and request.url.path not in {"/api/health", "/api/login"}:
             if not authenticated(request):
-                return JSONResponse({"detail": "请先输入访问码登录"}, status_code=401)
+                return JSONResponse({"detail": "Sign in with the access code first"}, status_code=401)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -133,7 +133,7 @@ def create_app(settings=None, provider=None):
 
     @app.exception_handler(KeyError)
     async def missing(request, exc):
-        return JSONResponse({"detail": "会话或任务不存在"}, status_code=404)
+        return JSONResponse({"detail": "Session or run not found"}, status_code=404)
 
     @app.exception_handler(ToolError)
     async def tool_error(request, exc):
@@ -147,7 +147,7 @@ def create_app(settings=None, provider=None):
 
     @app.get("/api/health")
     async def health(request: Request):
-        return {"ok": True, "project": "GSCA", "model": settings.model_name, "provider": "Ollama · 3184千问代理", "authenticated": authenticated(request), "version": "0.1.0"}
+        return {"ok": True, "project": "GSCA", "model": settings.model_name, "provider": "Ollama / Qwen proxy", "authenticated": authenticated(request), "version": "0.1.0"}
 
     @app.get("/api/model-health")
     async def model_health():
@@ -164,10 +164,10 @@ def create_app(settings=None, provider=None):
         while recent and now - recent[0] > 60:
             recent.popleft()
         if len(recent) >= 8:
-            raise HTTPException(429, "尝试次数过多，请一分钟后重试")
+            raise HTTPException(429, "Too many attempts. Try again in one minute.")
         if not hmac.compare_digest(data.token.strip().encode(), secret.encode()):
             recent.append(now)
-            raise HTTPException(401, "访问码不正确")
+            raise HTTPException(401, "Incorrect access code")
         recent.clear()
         stamp = str(int(time.time()))
         response = JSONResponse({"ok": True})
@@ -192,7 +192,7 @@ def create_app(settings=None, provider=None):
     @app.post("/api/sessions", status_code=201)
     async def create_session(data: SessionInput):
         if not data.title.strip():
-            raise HTTPException(422, "标题不能为空")
+            raise HTTPException(422, "Title must not be empty")
         return store.create_session(data.title.strip())
 
     @app.get("/api/sessions/{session_id}")
@@ -203,14 +203,14 @@ def create_app(settings=None, provider=None):
     async def start_run(session_id: str, data: RunInput):
         session = store.get_session(session_id)
         if not data.prompt.strip():
-            raise HTTPException(422, "消息不能为空")
+            raise HTTPException(422, "Message must not be empty")
         if len(runner.tasks) >= 8:
-            raise HTTPException(429, "待处理任务已满，请稍后重试")
+            raise HTTPException(429, "The task queue is full. Try again later.")
         try:
             run = store.create_run(session_id, data.prompt.strip())
         except ValueError as exc:
-            raise HTTPException(409, "当前会话已有任务正在执行") from None
-        if session["title"] == "新会话":
+            raise HTTPException(409, "This session already has an active run") from None
+        if session["title"] == "New session":
             store.rename_session(session_id, data.prompt.strip()[:35])
         runner.submit(run)
         return run
@@ -228,7 +228,7 @@ def create_app(settings=None, provider=None):
     def file_guard(session_id):
         store.get_session(session_id)
         if any(r["status"] in {"queued", "running"} for r in store.list_runs(session_id)):
-            raise HTTPException(409, "请等待当前任务结束后上传文件")
+            raise HTTPException(409, "Wait for the current run to finish before uploading files")
 
     @app.get("/api/sessions/{session_id}/files")
     async def files(session_id: str, path: str = "."):

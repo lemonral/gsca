@@ -23,7 +23,7 @@ class OllamaProvider:
                 response.raise_for_status()
                 return response.json()
         except (OSError, ValueError, httpx.HTTPError):
-            raise ProviderError("千问代理不可用或鉴权失败，请检查服务器模型配置。") from None
+            raise ProviderError("The Qwen proxy is unavailable or authentication failed. Check the model configuration.") from None
 
     async def chat(self, messages, tools, remaining_tokens):
         payload = {
@@ -37,22 +37,22 @@ class OllamaProvider:
                 async with client.stream("POST", self.settings.model_base_url + "/api/chat",
                                          json=payload, headers=self.headers()) as response:
                     if response.status_code != 200:
-                        raise ProviderError(f"千问代理返回HTTP {response.status_code}，本次未自动重试。")
+                        raise ProviderError(f"The Qwen proxy returned HTTP {response.status_code}. The request was not retried automatically.")
                     body = bytearray()
                     async for chunk in response.aiter_bytes():
                         body.extend(chunk)
                         if len(body) > 2 * 1024 * 1024:
-                            raise ProviderError("模型响应超过大小限制。")
+                            raise ProviderError("The model response exceeds the size limit.")
             data = json.loads(body)
             if not data.get("done") or not isinstance(data.get("message"), dict):
-                raise ProviderError("模型未返回完整结果。")
+                raise ProviderError("The model did not return a complete result.")
             if data.get("done_reason") == "length":
-                raise ProviderError("模型输出达到长度上限，请缩小任务或提高输出预算。")
+                raise ProviderError("The model reached the output limit. Reduce the task or increase the output budget.")
             message = data["message"]
             content = message.get("content", "")
             calls = message.get("tool_calls", [])
             if not isinstance(content, str) or not isinstance(calls, list):
-                raise ProviderError("模型返回了无效消息结构。")
+                raise ProviderError("The model returned an invalid message structure.")
             # Deliberately omit the provider's optional internal thinking field.
             return {"role": "assistant", "content": content, "tool_calls": calls}, {
                 "prompt_tokens": int(data.get("prompt_eval_count", 0)),
@@ -61,6 +61,6 @@ class OllamaProvider:
         except ProviderError:
             raise
         except httpx.TimeoutException:
-            raise ProviderError("千问响应超时，本次未自动重复提交。") from None
+            raise ProviderError("The Qwen request timed out. It was not resubmitted automatically.") from None
         except (OSError, ValueError, TypeError, httpx.HTTPError):
-            raise ProviderError("千问接口连接或响应解析失败，请检查服务状态。") from None
+            raise ProviderError("The Qwen connection or response parsing failed. Check the service status.") from None

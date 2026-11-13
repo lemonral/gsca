@@ -18,7 +18,7 @@ class FakeProvider:
         self.calls.append(list(messages))
         await asyncio.sleep(self.delay)
         if not self.replies:
-            raise ProviderError("模拟模型故障")
+            raise ProviderError("Simulated model failure")
         message = self.replies.pop(0)
         return message, {"prompt_tokens": 100, "completion_tokens": 30}
 
@@ -33,12 +33,12 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.settings = Settings(Path(self.tmp.name))
         self.store = Store(Path(self.tmp.name))
         self.tools = ToolRegistry(Path(self.tmp.name) / "workspaces")
-        self.session = self.store.create_session("测试")
+        self.session = self.store.create_session("Test")
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
 
-    async def run_with(self, provider, prompt="测试", settings=None):
+    async def run_with(self, provider, prompt="Test", settings=None):
         runner = AgentRunner(settings or self.settings, self.store, self.tools, provider)
         run = self.store.create_run(self.session["id"], prompt)
         runner.submit(run)
@@ -47,7 +47,7 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_real_tool_loop_and_saved_evidence(self):
         p = FakeProvider([call("calculate", {"expression": "23*19"}),
-                          {"role": "assistant", "content": "计算结果是437。"}])
+                          {"role": "assistant", "content": "The result is 437."}])
         run, _ = await self.run_with(p)
         self.assertEqual(run["status"], "completed")
         events = self.store.events(run["id"])
@@ -56,12 +56,12 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("437", str(result))
         self.assertEqual(p.calls[1][-1]["role"], "tool")
         self.assertEqual(run["usage"]["completion_tokens"], 60)
-        self.assertEqual(self.store.messages(self.session["id"])[-1]["content"], "计算结果是437。")
+        self.assertEqual(self.store.messages(self.session["id"])[-1]["content"], "The result is 437.")
 
     async def test_unknown_tool_and_escape_never_executed(self):
         p = FakeProvider([call("shell", {"command": "touch /tmp/unsafe"}),
                           call("write_file", {"path": "../escape.txt", "content": "bad"}),
-                          {"role": "assistant", "content": "工具拒绝了操作。"}])
+                          {"role": "assistant", "content": "The tool rejected the operation."}])
         run, _ = await self.run_with(p)
         results = [e["payload"]["result"] for e in self.store.events(run["id"]) if e["kind"] == "tool_result"]
         self.assertTrue(all(not r["ok"] for r in results))
@@ -75,7 +75,7 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
     async def test_cancel_before_model_completion(self):
         p = FakeProvider([call("write_file", {"path": "never.txt", "content": "bad"})], delay=5)
         runner = AgentRunner(self.settings, self.store, self.tools, p)
-        run = self.store.create_run(self.session["id"], "稍后写入")
+        run = self.store.create_run(self.session["id"], "Write later")
         runner.submit(run)
         await asyncio.sleep(.01)
         task = runner.tasks[run["id"]]
@@ -92,11 +92,13 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.tools.execute("list_files", {}, self.session["id"])["files"], [])
 
     async def test_context_window_rejects_oversize_input_before_model(self):
-        p = FakeProvider([{"role": "assistant", "content": "should not happen"}])
-        run, _ = await self.run_with(p, prompt="很长的问题" * 1500)
-        self.assertEqual(run["status"], "failed")
-        self.assertIn("上下文", run["error"])
-        self.assertEqual(p.calls, [])
+        for repeat in (300, 1500):
+            with self.subTest(repeat=repeat):
+                p = FakeProvider([{"role": "assistant", "content": "should not happen"}])
+                run, _ = await self.run_with(p, prompt="A very long research question " * repeat)
+                self.assertEqual(run["status"], "failed")
+                self.assertIn("context window", run["error"])
+                self.assertEqual(p.calls, [])
 
 
 if __name__ == "__main__":

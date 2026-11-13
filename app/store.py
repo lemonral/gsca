@@ -78,18 +78,18 @@ class Store:
             out["usage"] = json.loads(out["usage"])
         return out
 
-    def create_session(self, title: str = "新对话") -> dict:
+    def create_session(self, title: str = "New session") -> dict:
         if not isinstance(title, str):
-            raise ValueError("title必须为字符串")
+            raise ValueError("title must be a string")
         now, identity = _now(), uuid4().hex
         with self._connect() as db:
             db.execute("INSERT INTO sessions VALUES (?, ?, ?, ?)",
-                       (identity, title.strip()[:160] or "新对话", now, now))
+                       (identity, title.strip()[:160] or "New session", now, now))
             return self._one(db, "sessions", identity)
 
     def rename_session(self, identity: str, title: str) -> dict:
         if not isinstance(title, str) or not title.strip():
-            raise ValueError("title不能为空")
+            raise ValueError("title must not be empty")
         with self._connect() as db:
             self._one(db, "sessions", identity)
             db.execute("UPDATE sessions SET title=?, updated_at=? WHERE id=?",
@@ -113,7 +113,7 @@ class Store:
 
     def create_run(self, session_id: str, prompt: str) -> dict:
         if not isinstance(prompt, str) or not prompt.strip():
-            raise ValueError("prompt不能为空")
+            raise ValueError("prompt must not be empty")
         now, identity = _now(), uuid4().hex
         try:
             with self._connect() as db:
@@ -126,7 +126,7 @@ class Store:
                 db.execute("UPDATE sessions SET updated_at=? WHERE id=?", (now, session_id))
                 return self._one(db, "runs", identity)
         except sqlite3.IntegrityError as exc:
-            raise ValueError("该会话已有运行中的任务，请等待或取消后再提交") from exc
+            raise ValueError("This session already has an active run. Wait or cancel it before submitting another.") from exc
 
     def get_run(self, identity: str) -> dict:
         with self._connect() as db:
@@ -141,11 +141,11 @@ class Store:
 
     def set_run(self, identity: str, status=None, error=None, steps=None, usage=None) -> dict:
         if status is not None and status not in STATUSES:
-            raise ValueError("未知运行状态")
+            raise ValueError("Unknown run status")
         if steps is not None and (type(steps) is not int or steps < 0):
-            raise ValueError("steps必须为非负整数")
+            raise ValueError("steps must be a non-negative integer")
         if usage is not None and not isinstance(usage, dict):
-            raise ValueError("usage必须为对象")
+            raise ValueError("usage must be an object")
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             current = self._one(db, "runs", identity)
@@ -160,21 +160,21 @@ class Store:
             try:
                 db.execute(f"UPDATE runs SET {clause} WHERE id=?", (*values.values(), identity))
             except sqlite3.IntegrityError as exc:
-                raise ValueError("该会话已有活动任务") from exc
+                raise ValueError("This session already has an active run") from exc
             db.execute("UPDATE sessions SET updated_at=? WHERE id=?",
                        (values["updated_at"], current["session_id"]))
             return self._one(db, "runs", identity)
 
     def add_message(self, session_id: str, role: str, content: str, run_id=None) -> dict:
         if role not in {"user", "assistant", "system", "tool"} or not isinstance(content, str):
-            raise ValueError("消息角色或内容无效")
+            raise ValueError("Invalid message role or content")
         now = _now()
         with self._connect() as db:
             self._one(db, "sessions", session_id)
             if run_id is not None:
                 run = self._one(db, "runs", run_id)
                 if run["session_id"] != session_id:
-                    raise ValueError("运行与会话不匹配")
+                    raise ValueError("The run does not belong to this session")
             cursor = db.execute("INSERT INTO messages(session_id, role, content, run_id, created_at) "
                                 "VALUES (?, ?, ?, ?, ?)", (session_id, role, content, run_id, now))
             db.execute("UPDATE sessions SET updated_at=? WHERE id=?", (now, session_id))
@@ -182,7 +182,7 @@ class Store:
 
     def event(self, run_id: str, kind: str, payload: dict) -> dict:
         if not isinstance(kind, str) or not kind or not isinstance(payload, dict):
-            raise ValueError("事件类型或载荷无效")
+            raise ValueError("Invalid event kind or payload")
         with self._connect() as db:
             self._one(db, "runs", run_id)
             cursor = db.execute("INSERT INTO events(run_id, kind, payload, created_at) VALUES (?, ?, ?, ?)",
@@ -193,7 +193,7 @@ class Store:
 
     def events(self, run_id: str, after: int = 0) -> list[dict]:
         if type(after) is not int or after < 0:
-            raise ValueError("after必须为非负整数")
+            raise ValueError("after must be a non-negative integer")
         with self._connect() as db:
             self._one(db, "runs", run_id)
             rows = db.execute("SELECT * FROM events WHERE run_id=? AND id>? ORDER BY id",
@@ -203,7 +203,7 @@ class Store:
     def recover(self) -> int:
         """Call once on service startup, before accepting requests."""
         now = _now()
-        explanation = "服务重启，上一轮任务已中断；请检查已有产物后重新提交。"
+        explanation = "The service restarted and interrupted this run. Check existing artifacts before submitting again."
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             rows = db.execute("SELECT id FROM runs WHERE status IN ('queued', 'running')").fetchall()
