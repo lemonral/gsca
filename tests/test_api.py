@@ -50,7 +50,7 @@ class APITests(unittest.TestCase):
     def test_run_complete_then_new_app_recovers_history(self):
         self.login()
         session = self.client.post("/api/sessions", json={}).json()
-        run = self.client.post(f'/api/sessions/{session["id"]}/runs', json={"prompt": "\u4f60\u597d"}).json()
+        run = self.client.post(f'/api/sessions/{session["id"]}/runs', json={"prompt": "Hello"}).json()
         for _ in range(100):
             detail = self.client.get('/api/runs/' + run["id"]).json()
             if detail["run"]["status"] == "completed":
@@ -58,9 +58,9 @@ class APITests(unittest.TestCase):
             time.sleep(.01)
         self.assertEqual(detail["run"]["status"], "completed")
         result = self.client.get('/api/sessions/' + session["id"]).json()
-        self.assertEqual(result["messages"][-1]["content"], "Received: \u4f60\u597d")
+        self.assertEqual(result["messages"][-1]["content"], "Received: Hello")
         other = create_app(self.settings, Provider())
-        self.assertEqual(other.state.store.messages(session["id"])[-1]["content"], "Received: \u4f60\u597d")
+        self.assertEqual(other.state.store.messages(session["id"])[-1]["content"], "Received: Hello")
 
     def test_upload_read_no_overwrite_and_session_isolation(self):
         self.login()

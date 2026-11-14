@@ -13,9 +13,11 @@ from app.tools import ToolRegistry
 class FakeProvider:
     def __init__(self, replies, delay=0):
         self.replies, self.delay, self.calls = list(replies), delay, []
+        self.tool_sets = []
 
     async def chat(self, messages, tools, remaining):
         self.calls.append(list(messages))
+        self.tool_sets.append(tools)
         await asyncio.sleep(self.delay)
         if not self.replies:
             raise ProviderError("Simulated model failure")
@@ -99,6 +101,38 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(run["status"], "failed")
                 self.assertIn("context window", run["error"])
                 self.assertEqual(p.calls, [])
+
+    async def test_non_english_response_is_rewritten_without_tools(self):
+        p = FakeProvider([{"role": "assistant", "content": "\u4f60\u597d"},
+                          {"role": "assistant", "content": "Hello from GSCA."}])
+        run, _ = await self.run_with(p)
+        self.assertEqual(run["status"], "completed")
+        self.assertEqual(p.tool_sets[1], [])
+        self.assertEqual(self.store.messages(self.session["id"])[-1]["content"], "Hello from GSCA.")
+        self.assertEqual(sum(e["kind"] == "response_language_retry" for e in self.store.events(run["id"])), 1)
+
+    async def test_language_retry_is_bounded_and_does_not_store_bad_reply(self):
+        p = FakeProvider([{"role": "assistant", "content": "\u4f60\u597d"}] * 2)
+        run, _ = await self.run_with(p)
+        self.assertEqual(run["status"], "failed")
+        self.assertEqual(len(p.calls), 2)
+        self.assertFalse(any(m["role"] == "assistant" for m in self.store.messages(self.session["id"])))
+
+    async def test_language_rewrite_cannot_execute_new_tools(self):
+        p = FakeProvider([{"role": "assistant", "content": "\u4f60\u597d"},
+                          call("write_file", {"path": "never.txt", "content": "bad"})])
+        run, _ = await self.run_with(p)
+        self.assertEqual(run["status"], "failed")
+        self.assertEqual(self.tools.execute("list_files", {}, self.session["id"])["files"], [])
+
+    async def test_verified_unicode_artifact_path_is_preserved(self):
+        path = "\u6d4b\u8bd5.txt"
+        p = FakeProvider([call("write_file", {"path": path, "content": "Verified data"}),
+                          {"role": "assistant", "content": "Saved " + path + "."}])
+        run, _ = await self.run_with(p)
+        self.assertEqual(run["status"], "completed")
+        self.assertEqual(self.tools.execute("read_file", {"path": path}, self.session["id"])["content"], "Verified data")
+        self.assertFalse(any(e["kind"] == "response_language_retry" for e in self.store.events(run["id"])))
 
 
 if __name__ == "__main__":

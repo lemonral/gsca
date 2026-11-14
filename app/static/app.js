@@ -3,7 +3,7 @@
 const $ = id => document.getElementById(id);
 const ACTIVE = new Set(["queued", "running", "cancelling", "pending"]);
 const statusNames = {queued:"Queued",pending:"Queued",running:"Running",cancelling:"Stopping",completed:"Completed",succeeded:"Completed",failed:"Failed",cancelled:"Cancelled",interrupted:"Interrupted",timed_out:"Timed out"};
-const eventNames = {model_started:"Model request",model_completed:"Model response",tool_call:"Tool call",tool_result:"Tool result",run_status:"Run status",error:"Error",assistant:"Reply",run_started:"Task started",run_completed:"Task completed",run_failed:"Task failed",run_cancelled:"Task cancelled"};
+const eventNames = {response_language_retry:"English rewrite",model_started:"Model request",model_completed:"Model response",tool_call:"Tool call",tool_result:"Tool result",run_status:"Run status",error:"Error",assistant:"Reply",run_started:"Task started",run_completed:"Task completed",run_failed:"Task failed",run_cancelled:"Task cancelled"};
 const state = {sessionId:null,epoch:0,sessions:[],runs:[],viewRunId:null,activeRunId:null,viewRun:null,messages:[],timer:null,sending:false,navigating:false,navigationToken:0,sessionReady:true,filePath:".",tab:"trace",authenticated:false};
 let toastTimer;
 
@@ -178,6 +178,7 @@ function renderRunSelect() {
 function eventSummary(event) {
   const payload = event.payload || {};
   if (typeof payload === "string") return payload.slice(0,160);
+  if (event.kind === "response_language_retry") return "Rewriting the reply in English. Tool execution is disabled.";
   if (event.kind === "tool_call") return `${payload.name || payload.tool || "Tool"}  ${safeText(payload.arguments || payload.args || {}).replace(/\n\s*/g," ").slice(0,100)}`;
   if (event.kind === "tool_result") {
     const result = payload.result;

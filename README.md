@@ -169,7 +169,7 @@ Cancellation prevents subsequent model requests and tool steps. Whether an alrea
 node --check app/static/app.js
 ```
 
-The 25 automated tests cover tool boundaries, arithmetic constraints, session isolation, prevention of concurrent runs within a session, persistence and restart recovery, authentication, request-size limits, cancellation, and context limits. Real-browser checks cover login, run history, tool traces, independent sessions, chat, uploads, reloads, and mobile layout.
+The 29 automated tests cover tool boundaries, arithmetic constraints, session isolation, prevention of concurrent runs within a session, persistence and restart recovery, authentication, request-size limits, cancellation, and context limits. Real-browser checks cover login, run history, tool traces, independent sessions, chat, uploads, reloads, and mobile layout.
 
 Run a bounded live acceptance check against your own instance:
 
@@ -211,3 +211,7 @@ Register each tool's purpose and argument schema in `tools.py`, implement a boun
 For backups, stop this project's service before archiving all of `data/`. SQLite uses WAL; copying only the main database file while it is running may omit state. Use the SQLite backup API for online database backups. Stop the service before restoring a complete backup and check the restored UID/GID ownership.
 
 GSCA currently provides the runtime foundation for a general structural computing agent. Further development focuses on scientific task specifications, structural object semantics, scientific tool adapters, and domain validation. Multi-user access and distributed jobs also require separate implementation and acceptance checks.
+
+### Response language
+
+The interface and default replies use English. If a reply contains Chinese prose, the runtime permits one language-only rewrite with tools disabled, subject to the same step, token, and time limits. If the rewrite still violates this check, the run fails with an English error instead of presenting that reply. Exact workspace artifact paths are preserved. This script check is not a general language classifier.

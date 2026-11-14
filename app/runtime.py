@@ -1,5 +1,7 @@
 import asyncio
 import json
+import re
+from pathlib import PurePosixPath
 from .provider import ProviderError
 from .tools import ToolError
 
@@ -79,6 +81,8 @@ class AgentRunner:
                     if len(selected) < len(history):
                         self.store.event(run_id, "context_trimmed", {"kept_messages": len(selected), "total_messages": len(history)})
                     tool_count = 0
+                    language_retries = 0
+                    artifact_references = set()
                     for step in range(1, self.settings.max_steps + 1):
                         remaining = self.settings.max_total_tokens - sum(usage.values())
                         if remaining < 64:
@@ -92,7 +96,8 @@ class AgentRunner:
                             raise ProviderError("The current context exceeds the remaining budget. Start a new session or reduce the task.")
                         self.store.set_run(run_id, steps=step)
                         self.store.event(run_id, "model_started", {"step": step, "model": self.settings.model_name})
-                        message, counts = await self.provider.chat(messages, self.registry.schemas, remaining)
+                        available_tools = [] if language_retries else self.registry.schemas
+                        message, counts = await self.provider.chat(messages, available_tools, remaining)
                         for key in usage:
                             usage[key] += counts.get(key, 0)
                         self.store.set_run(run_id, usage=usage)
@@ -100,10 +105,23 @@ class AgentRunner:
                         if sum(usage.values()) > self.settings.max_total_tokens:
                             raise ProviderError("The token budget has been exhausted. No further tools were executed.")
                         calls = message.get("tool_calls", [])
+                        if language_retries and calls:
+                            raise ProviderError("The model attempted a tool call during an English-only rewrite. No additional tools were executed.")
                         if not calls:
                             answer = message["content"].strip()
                             if not answer:
                                 raise ProviderError("The model returned an empty response.")
+                            language_text = answer
+                            for reference in sorted(artifact_references, key=len, reverse=True):
+                                language_text = language_text.replace(reference, "workspace artifact")
+                            if re.search(r"[\u3400-\u9fff]", language_text):
+                                if language_retries or step == self.settings.max_steps:
+                                    raise ProviderError("The model did not produce an English response. The run stopped; existing artifacts remain available.")
+                                messages.extend([message, {"role": "user", "content":
+                                    "Rewrite your previous response entirely in English. Preserve every numerical result and exact file path. Do not add claims or execute tools. Return only the English response."}])
+                                language_retries = 1
+                                self.store.event(run_id, "response_language_retry", {"target_language": "en", "tool_execution_enabled": False})
+                                continue
                             self.store.add_message(session_id, "assistant", answer, run_id)
                             self.store.set_run(run_id, status="completed")
                             self.store.event(run_id, "run_status", {"status": "completed"})
@@ -125,6 +143,10 @@ class AgentRunner:
                                 # synchronously so cancellation cannot orphan a file write.
                                 result = self.registry.execute(name, arguments, session_id)
                                 outcome = {"ok": True, **result}
+                                if isinstance(result.get("path"), str) and result["path"] not in {"", "."}:
+                                    artifact_references.add(result["path"])
+                                    if PurePosixPath(result["path"]).name:
+                                        artifact_references.add(PurePosixPath(result["path"]).name)
                             except ToolError as exc:
                                 outcome = {"ok": False, "error": str(exc)}
                             self.store.event(run_id, "tool_result", {"name": name, "result": outcome})
